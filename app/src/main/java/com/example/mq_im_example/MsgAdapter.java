@@ -16,12 +16,12 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.MsgViewHolder> {
     public MsgViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_msg_left, parent, false);
         return new MsgViewHolder(v);
-    }
-    @Override
+    }    @Override
     public void onBindViewHolder(@NonNull MsgViewHolder holder, int position) {
         MsgBean msg = data.get(position);
         holder.tvUser.setText(msg.user + ":");
         holder.tvContent.setText(msg.msg);
+        holder.tvContent.setBackgroundResource(R.drawable.bg_msg_left);
     }
     @Override
     public int getItemCount() { return data.size(); }

@@ -27,8 +27,12 @@ public class RabbitMqManager {
     public static void setConfig(String h, int p, String u, String pwd) {
         setConfig(h, p, u, pwd, "mq_im_example");
     }
+    public static void setConfig(String h, int p, String u, String pwd, String vhostName, boolean isImMode) {
+        setConfig(h, p, u, pwd, vhostName);
+        // 如需根据 isImMode 做特殊配置，可在此处扩展
+    }
     public static void connect() throws IOException, TimeoutException {
-        if (connection != null && connection.isOpen()) return;
+        if (connection != null && connection.isOpen() && channel != null && channel.isOpen()) return;
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(host);
         factory.setPort(port);
@@ -39,16 +43,44 @@ public class RabbitMqManager {
         channel = connection.createChannel();
     }
 
-    public static void sendMessage(String queue, String message) throws IOException, TimeoutException {
+    // 修正：区分IM群聊和点对点
+    public static void sendMessage(String queueOrExchange, String message, boolean isImMode) throws IOException, TimeoutException {
         connect();
-        channel.queueDeclare(queue, false, false, false, null);
-        channel.basicPublish("", queue, null, message.getBytes());
+        if (isImMode) {
+            // IM群聊模式：fanout交换机
+            channel.exchangeDeclare(queueOrExchange, BuiltinExchangeType.FANOUT, true);
+            channel.basicPublish(queueOrExchange, "", null, message.getBytes());
+        } else {
+            // 点对点模式：普通队列
+            channel.queueDeclare(queueOrExchange, false, false, false, null);
+            channel.basicPublish("", queueOrExchange, null, message.getBytes());
+        }
     }
 
-    public static void receiveMessage(String queue, DeliverCallback deliverCallback) throws IOException, TimeoutException {
+    // 兼容旧接口
+    public static void sendMessage(String queue, String message) throws IOException, TimeoutException {
+        sendMessage(queue, message, false);
+    }
+
+    // 修正：区分IM群聊和点对点
+    public static void receiveMessage(String queueOrExchange, DeliverCallback deliverCallback, boolean isImMode) throws IOException, TimeoutException {
         connect();
-        channel.queueDeclare(queue, false, false, false, null);
-        channel.basicConsume(queue, true, deliverCallback, consumerTag -> {});
+        if (isImMode) {
+            // IM群聊模式：fanout交换机+临时队列
+            channel.exchangeDeclare(queueOrExchange, BuiltinExchangeType.FANOUT, true);
+            String queueName = channel.queueDeclare().getQueue(); // 临时队列
+            channel.queueBind(queueName, queueOrExchange, "");
+            channel.basicConsume(queueName, true, deliverCallback, consumerTag -> {});
+        } else {
+            // 点对点模式：普通队列
+            channel.queueDeclare(queueOrExchange, false, false, false, null);
+            channel.basicConsume(queueOrExchange, true, deliverCallback, consumerTag -> {});
+        }
+    }
+
+    // 兼容旧接口
+    public static void receiveMessage(String queue, DeliverCallback deliverCallback) throws IOException, TimeoutException {
+        receiveMessage(queue, deliverCallback, false);
     }
 
     public static void close() throws IOException, TimeoutException {
