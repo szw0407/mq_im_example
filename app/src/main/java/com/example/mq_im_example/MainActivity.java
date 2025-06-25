@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private final String QUEUE_NAME = "mq_im_example";
     private String userName = "";
     private String userPassword = "";
-    private String serverHost = "10.27.250.168";   // This is temporarily mine for testing. You should change it.
+    private String serverHost = "20.120.25.102";   // This is temporarily mine for testing. You should change it.
     private int serverPort = 5672;
     private String channelName = "mq_im_example";
     private static final String[] PRESET_USERS = {"user1", "user2", "user3", "user4"};
